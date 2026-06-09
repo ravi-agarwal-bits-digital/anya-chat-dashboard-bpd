@@ -154,7 +154,7 @@ body::before{content:"";position:fixed;inset:-25%;z-index:-1;pointer-events:none
 
 <div id="uploadView">
   <div class="tag">BITS Pilani Digital · Internal Tool</div>
-  <h1>KAI Chatbot <em>Analyzer</em></h1>
+  <h1>Anya Chatbot <em>Analyzer</em></h1>
   <p class="lead">Drop in the vendor's chat export and explore the full intelligence report — filter by any date range, see drop-off, demand, topics and failure modes. Everything runs in your browser; nothing is uploaded.</p>
   <div class="drop" id="dropZone">
     <div class="ic">📊</div><b>Drop the Excel here</b>
@@ -170,7 +170,7 @@ body::before{content:"";position:fixed;inset:-25%;z-index:-1;pointer-events:none
     <div class="htop">
       <div>
         <div class="tag">Independent Analysis · Generated In-Browser</div>
-        <h1>KAI Chatbot <em>— Intelligence Report</em></h1>
+        <h1>Anya Chatbot <em>— Intelligence Report</em></h1>
         <div class="meta" id="meta"></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -528,7 +528,7 @@ function paintHealth(o){
     <text x="${cx}" y="${cy+22}" text-anchor="middle" fill="${C.muted}" font-family="IBM Plex Mono" font-size="10">FUNNEL HEALTH</text>
     <text x="${cx}" y="${cy+44}" text-anchor="middle" fill="${col}" font-family="Fraunces" font-size="22" font-weight="900">${g}</text></svg>`;
   $("heroText").innerHTML=`<h3>Funnel Health Score</h3><div class="verdict">${verdict}</div>
-    <p>A single read on how well KAI turns visitors into captured leads in this range — blending capture rate, how many get past the intake wall, and freedom from greeting-loops. Lift the drop-off and this climbs fast.</p>
+    <p>A single read on how well Anya turns visitors into captured leads in this range — blending capture rate, how many get past the intake wall, and freedom from greeting-loops. Lift the drop-off and this climbs fast.</p>
     <span class="gradechip" style="color:${col}">GRADE ${g} · ${s}/100</span>`;
 }
 function convBar(id,rows){ // rows: [label, lead, total]
@@ -613,13 +613,13 @@ function shareExport(){
   if(!RECORDS.length)return;
   const payload={version:2,generatedAt:new Date().toISOString(),sourceName:SRC||"export",records:RECORDS};
   const blob=new Blob([JSON.stringify(payload)],{type:"application/json"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="kai-data.json";a.click();
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="Anya-data.json";a.click();
 }
 $("exportBtn").onclick=shareExport;
 
 async function tryAutoLoad(){
   try{
-    const r=await fetch("./kai-data.json",{cache:"no-store"});
+    const r=await fetch("./Anya-data.json",{cache:"no-store"});
     if(!r.ok)return;
     const j=await r.json();
     if(j&&j.records){RECORDS=j.records.filter(x=>x.d);SRC=j.sourceName||"published data";PUBLISHED=j.generatedAt;boot();}
