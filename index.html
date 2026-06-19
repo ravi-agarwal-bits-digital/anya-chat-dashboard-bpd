@@ -316,7 +316,9 @@ function rowToRecord(r){
   const t=(conv+" "+summ).toLowerCase(),convL=conv.toLowerCase();
   const am=Number(r["Agent Messages"])||0;
   const tp=(conv.match(/User:/g)||[]).length;
-  const dt=parseDateFull(r["Chat Created At"]);
+  // Handle both old ("Chat Created At") and new ("Chat Created At (UTC)", "Chat Created At (IST)") column names
+  let dtStr=r["Chat Created At"]||r["Chat Created At (UTC)"]||r["Chat Created At (IST)"]||"";
+  const dt=parseDateFull(dtStr);
   const looped=(convL.split(GREET).length-1)>=2;
   const qx=extractQ(conv);
   return{
