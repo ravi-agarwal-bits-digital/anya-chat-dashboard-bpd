@@ -242,7 +242,7 @@ body.viewer #adminBtns{display:none!important}
     <label>Branch</label>
     <input id="ghBranch" value="main" autocomplete="off">
     <label>Data file path</label>
-    <input id="ghPath" value="Anya-data.json" autocomplete="off">
+    <input id="ghPath" value="anya-data.json" autocomplete="off">
     <label>GitHub access token (fine-grained, Contents: Read &amp; write)</label>
     <input id="ghToken" type="password" placeholder="github_pat_…" autocomplete="off">
     <label>Dashboard password <span style="color:var(--faint)">(encrypts data for viewers — share with the team)</span></label>
@@ -710,7 +710,7 @@ async function shareExport(){
   const c=getCfg();
   const out=c.dataPw?await encEnvelope(payload,c.dataPw):payload;
   const blob=new Blob([JSON.stringify(out)],{type:"application/json"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="Anya-data.json";a.click();
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="anya-data.json";a.click();
 }
 $("exportBtn").onclick=shareExport;
 
@@ -731,13 +731,13 @@ $("publishBtn").onclick=()=>{
 };
 function openGhModal(){
   const c=getCfg();
-  $("ghRepo").value=c.repo||"";$("ghBranch").value=c.branch||"main";$("ghPath").value=c.path||"Anya-data.json";$("ghToken").value=c.token||"";$("ghPwData").value=c.dataPw||"";
+  $("ghRepo").value=c.repo||"";$("ghBranch").value=c.branch||"main";$("ghPath").value=c.path||"anya-data.json";$("ghToken").value=c.token||"";$("ghPwData").value=c.dataPw||"";
   $("ghModal").classList.add("show");
 }
 $("ghCancel").onclick=()=>$("ghModal").classList.remove("show");
 $("ghSettings").onclick=openGhModal;
 $("ghSave").onclick=()=>{
-  const c={repo:$("ghRepo").value.trim().replace(/^https?:\/\/github\.com\//,"").replace(/\/$/,""),branch:$("ghBranch").value.trim()||"main",path:$("ghPath").value.trim()||"Anya-data.json",token:$("ghToken").value.trim(),dataPw:$("ghPwData").value};
+  const c={repo:$("ghRepo").value.trim().replace(/^https?:\/\/github\.com\//,"").replace(/\/$/,""),branch:$("ghBranch").value.trim()||"main",path:$("ghPath").value.trim()||"anya-data.json",token:$("ghToken").value.trim(),dataPw:$("ghPwData").value};
   if(!/^[^/]+\/[^/]+$/.test(c.repo)){ghStatus("Repository must look like owner/name.","err");return;}
   if(!c.token){ghStatus("A GitHub token is required.","err");return;}
   setCfg(c);$("ghModal").classList.remove("show");ghPublish();
@@ -796,7 +796,7 @@ function applyData(j){RECORDS=(j.records||[]).filter(x=>x.d);SRC=j.sourceName||"
 
 async function init(){
   let raw=null;
-  try{const r=await fetch("./Anya-data.json",{cache:"no-store"});if(r.ok)raw=await r.json();}catch(e){}
+  try{const r=await fetch("./anya-data.json",{cache:"no-store"});if(r.ok)raw=await r.json();}catch(e){}
   if(!raw){ if(ADMIN)$("uploadView").style.display="flex"; else showWait(); return; }
   if(raw.enc){
     const pw=getDataPw();
