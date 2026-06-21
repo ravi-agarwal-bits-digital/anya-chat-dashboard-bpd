@@ -236,7 +236,8 @@ details.method .body b{color:var(--muted)}
 const $=id=>document.getElementById(id);
 const DATA_FILE='data/chat_analytics.xlsx';
 const SHEET='Chats Export';
-const SECURITY={PASSWORD_HASH:"7c1466118dea24f6b18e2df487245b062b86232bff0ab6d978e8a46f9e36855a",SESSION_TIMEOUT_MINS:30};
+// SHA-256 of "Aanya@Chat-2026!BPD". To change: hash a new password and replace below.
+const SECURITY={PASSWORD_HASH:"2f8f998b75f4bfd79e4b9a0760d82905cfbe1fccb942ecfd6d1e8999e04c021f",SESSION_TIMEOUT_MINS:30};
 
 /* ---------- crypto / auth ---------- */
 async function sha256(t){const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('');}
