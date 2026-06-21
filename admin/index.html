@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Aanya Chat — Admin Upload</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#15131d;--panel:#1c1925;--line:#332d42;--paper:#eee9e0;--muted:#9b94a8;--faint:#6f6880;--iris:#9b8cff;--iris-dim:#6f63c4;--iris-glow:#9b8cff33;--sage:#86d6a8;--coral:#ff7d8a;--amber:#f4b860}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Inter',sans-serif;background:var(--bg);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;color:var(--paper);
+      background-image:radial-gradient(circle at 8% -8%,#241d3a 0%,transparent 40%),radial-gradient(circle at 92% 4%,#2a1830 0%,transparent 38%)}
+    .container{background:linear-gradient(170deg,#1f1b2c,#181420);border:1px solid var(--line);border-radius:18px;padding:36px;max-width:540px;width:100%;box-shadow:0 30px 80px -30px #000a}
+    .logo{width:46px;height:46px;background:linear-gradient(145deg,var(--iris),var(--iris-dim));border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'Spectral',serif;font-weight:800;color:#16121f;font-size:24px;margin-bottom:16px}
+    h1{font-family:'Spectral',serif;font-weight:600;font-size:25px;margin-bottom:5px;letter-spacing:-.3px}
+    .subtitle{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:28px}
+    .form-group{margin-bottom:18px}
+    label{display:block;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);margin-bottom:7px;font-weight:500;text-transform:uppercase;letter-spacing:.6px}
+    input{width:100%;padding:11px 13px;background:#120f1a;border:1px solid var(--line);border-radius:9px;color:var(--paper);font-size:13px;font-family:inherit}
+    input:focus{outline:none;border-color:var(--iris);box-shadow:0 0 0 3px var(--iris-glow)}
+    .hint{color:var(--faint);font-size:10.5px;display:block;margin-top:5px;line-height:1.6}
+    .hint a{color:var(--iris)}
+    button{width:100%;padding:12px 16px;background:var(--iris);color:#16121f;border:none;border-radius:9px;font-size:12.5px;font-weight:700;cursor:pointer;transition:.18s;letter-spacing:.3px;margin-top:8px}
+    button:hover:not(:disabled){background:#aa9cff;transform:translateY(-1px)}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .status{margin-top:18px;padding:13px;border-radius:9px;font-size:12.5px;display:none;border-left:3px solid var(--iris);white-space:pre-line;line-height:1.6}
+    .status.show{display:block}
+    .status.success{background:#86d6a814;border-left-color:var(--sage);color:var(--sage)}
+    .status.error{background:#ff7d8a14;border-left-color:var(--coral);color:var(--coral)}
+    .status.loading{background:#9b8cff14;border-left-color:var(--amber);color:var(--amber);animation:pulse 1.5s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.65}}
+    .preview{margin-top:14px;padding:13px;border-radius:9px;font-size:12.5px;display:none;white-space:pre-line;line-height:1.6}
+    .preview.show{display:block}
+    .info-box{background:#120f1a;border:1px solid var(--line);border-radius:9px;padding:15px;font-size:11.5px;color:var(--muted);line-height:1.8;margin-top:24px}
+    .info-box b{color:var(--iris)}
+    .warn-box{background:#f4b8600f;border:1px solid #4a3a1a;border-radius:9px;padding:13px;font-size:11px;color:#d9bd82;line-height:1.7;margin-top:12px}
+    .warn-box b{color:var(--amber)}
+    #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;background-image:radial-gradient(circle at 12% 0%,#241d3a 0%,transparent 42%)}
+    #gate .card{background:linear-gradient(165deg,#211c30,#191523);border:1px solid var(--line);border-radius:18px;padding:38px;max-width:380px;width:100%;text-align:center}
+    #gate input{margin:16px 0 12px}
+    #gateErr{color:var(--coral);font-size:12px;min-height:18px;margin-top:8px}
+    #app{display:none}
+  </style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="card">
+    <div class="logo" style="margin:0 auto 16px">A</div>
+    <h1 style="font-size:20px">Admin access</h1>
+    <p class="subtitle" style="margin-bottom:0">Aanya Chat Analytics</p>
+    <input type="password" id="gatePwd" placeholder="Enter admin password…" onkeyup="if(event.key==='Enter')checkGate()">
+    <button onclick="checkGate()">Unlock</button>
+    <div id="gateErr"></div>
+  </div>
+</div>
+
+<div id="app">
+<div class="container">
+  <div class="logo">A</div>
+  <h1>Publish chat analytics</h1>
+  <p class="subtitle">Encrypt &amp; deploy the latest export</p>
+
+  <div class="form-group">
+    <label>GitHub token (fine-grained)</label>
+    <input type="password" id="ghToken" placeholder="github_pat_…" oninput="rememberToken()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;gap:10px">
+      <span class="hint" style="margin:0">Use a <b>fine-grained</b> token scoped to <b>only this repo</b> with <b>Contents: Read and write</b>:<br><a href="https://github.com/settings/personal-access-tokens/new" target="_blank">github.com/settings/personal-access-tokens/new</a></span>
+      <button type="button" id="forgetBtn" onclick="forgetToken()" style="width:auto;margin:0;padding:5px 10px;font-size:9px;background:transparent;border:1px solid var(--line);color:var(--muted);text-transform:none;letter-spacing:0;display:none">Forget</button>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>Excel export (.xlsx)</label>
+    <input type="file" id="excelFile" accept=".xlsx,.xls" onchange="validateFile()">
+    <span class="hint">Must contain a "Chats Export" sheet. Data is encrypted with your login password before it's uploaded.</span>
+  </div>
+
+  <div id="preview" class="preview"></div>
+
+  <button id="submitBtn" onclick="doUpload()" disabled>Encrypt &amp; publish</button>
+
+  <div id="status" class="status"></div>
+
+  <div class="info-box">
+    <b>How it works</b><br>
+    1. Paste your fine-grained GitHub token<br>
+    2. Choose the chat export — it's validated automatically<br>
+    3. Encrypt &amp; publish<br>
+    4. Dashboard refreshes in ~1–2 minutes<br>
+    Each upload writes a dated backup and updates the live file.
+  </div>
+
+  <div class="warn-box">
+    <b>Token safety:</b> use a <b>fine-grained</b> token limited to this one repository. Don't paste a classic token (those reach all your repos). Treat it like a password — never share it in chats or docs.
+  </div>
+</div>
+</div>
+
+<script>
+const ADMIN_PASSWORD_HASH="7c1466118dea24f6b18e2df487245b062b86232bff0ab6d978e8a46f9e36855a";
+// ↓↓↓ CONFIRM THESE MATCH WHERE THE DASHBOARD IS DEPLOYED ↓↓↓
+const GITHUB_OWNER="ravi-agarwal-bits-digital";
+const GITHUB_REPO ="anya-chat-dashboard";
+const GITHUB_BRANCH="main";
+// ↑↑↑
+const REQUIRED_SHEET="Chats Export";
+const REQUIRED_COLS=["Chat Created At (IST)","Chat ID","Agent Messages","Total Tokens","Summary","Full Conversation"];
+
+let VALIDATED_BYTES=null;
+let ENC_PASSPHRASE=null; // set from the gate password, reused for encryption
+
+async function sha256(text){
+  const data=new TextEncoder().encode(text);
+  const hash=await crypto.subtle.digest('SHA-256',data);
+  return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkGate(){
+  const pwd=document.getElementById('gatePwd').value;
+  const err=document.getElementById('gateErr');
+  if(!pwd){err.textContent="Enter the password.";return;}
+  if((await sha256(pwd))===ADMIN_PASSWORD_HASH){
+    ENC_PASSPHRASE=pwd; // reuse the gate password as the encryption key
+    document.getElementById('gate').style.display='none';
+    document.getElementById('app').style.display='block';
+    restoreToken();
+  }else{
+    err.textContent="Incorrect password.";
+    document.getElementById('gatePwd').value="";
+  }
+}
+
+function rememberToken(){
+  const t=document.getElementById('ghToken').value.trim();
+  if(t){sessionStorage.setItem('gh_token',t);document.getElementById('forgetBtn').style.display='block';}
+  else{sessionStorage.removeItem('gh_token');document.getElementById('forgetBtn').style.display='none';}
+}
+function restoreToken(){
+  const t=sessionStorage.getItem('gh_token');
+  if(t){document.getElementById('ghToken').value=t;document.getElementById('forgetBtn').style.display='block';}
+}
+function forgetToken(){
+  sessionStorage.removeItem('gh_token');
+  document.getElementById('ghToken').value='';
+  document.getElementById('forgetBtn').style.display='none';
+}
+
+function validateFile(){
+  VALIDATED_BYTES=null;
+  document.getElementById('submitBtn').disabled=true;
+  document.getElementById('preview').className="preview";
+  const file=document.getElementById('excelFile').files[0];
+  if(!file)return;
+  if(!/\.(xlsx|xls)$/i.test(file.name)){showPreview("File must be .xlsx or .xls","error");return;}
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const bytes=new Uint8Array(e.target.result);
+      const wb=XLSX.read(bytes,{type:'array'});
+      if(!wb.SheetNames.includes(REQUIRED_SHEET)){
+        showPreview(`Missing "${REQUIRED_SHEET}" sheet.\nFound: ${wb.SheetNames.join(", ")||"(none)"}`,"error");return;
+      }
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[REQUIRED_SHEET],{defval:""});
+      if(!rows.length){showPreview(`"${REQUIRED_SHEET}" sheet is empty.`,"error");return;}
+      const headers=Object.keys(rows[0]);
+      const missing=REQUIRED_COLS.filter(c=>!headers.includes(c));
+      if(missing.length){showPreview(`Missing required column(s):\n${missing.join(", ")}`,"error");return;}
+      VALIDATED_BYTES=bytes;
+      showPreview(`Valid file — ${rows.length} chat records found.\nReady to encrypt & publish.`,"ok");
+      document.getElementById('submitBtn').disabled=false;
+    }catch(err){showPreview("Could not read file: "+err.message,"error");}
+  };
+  reader.onerror=()=>showPreview("Failed to read file.","error");
+  reader.readAsArrayBuffer(file);
+}
+
+function showPreview(msg,type){
+  const p=document.getElementById('preview');
+  p.textContent=msg;
+  p.className="preview show";
+  p.style.background=type==="error"?"#ff7d8a14":"#86d6a814";
+  p.style.borderLeft="3px solid "+(type==="error"?"#ff7d8a":"#86d6a8");
+  p.style.color=type==="error"?"#ff7d8a":"#86d6a8";
+}
+
+// ===== AES-256-GCM encryption (matches dashboard decryption) =====
+const ENC_MAGIC="AANYAENC1";
+async function deriveKey(passphrase,salt){
+  const baseKey=await crypto.subtle.importKey('raw',new TextEncoder().encode(passphrase),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey(
+    {name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},
+    baseKey,{name:'AES-GCM',length:256},false,['encrypt']
+  );
+}
+async function encryptData(bytes,passphrase){
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const key=await deriveKey(passphrase,salt);
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,bytes));
+  const magic=new TextEncoder().encode(ENC_MAGIC);
+  const out=new Uint8Array(magic.length+salt.length+iv.length+ct.length);
+  out.set(magic,0);
+  out.set(salt,magic.length);
+  out.set(iv,magic.length+salt.length);
+  out.set(ct,magic.length+salt.length+iv.length);
+  return out;
+}
+
+async function doUpload(){
+  const token=document.getElementById('ghToken').value.trim();
+  if(!token){showStatus("Enter your GitHub token.","error");return;}
+  if(!ENC_PASSPHRASE){showStatus("Session error — reload and log in again.","error");return;}
+  if(!VALIDATED_BYTES){showStatus("Select a valid Excel file first.","error");return;}
+
+  showStatus("Encrypting & uploading…","loading");
+  document.getElementById('submitBtn').disabled=true;
+
+  let encBase64;
+  try{
+    const encBytes=await encryptData(VALIDATED_BYTES,ENC_PASSPHRASE);
+    let b='';const CH=8192;
+    for(let i=0;i<encBytes.length;i+=CH){b+=String.fromCharCode.apply(null,encBytes.subarray(i,i+CH));}
+    encBase64=btoa(b);
+  }catch(err){
+    showStatus("Encryption failed: "+err.message,"error");
+    document.getElementById('submitBtn').disabled=false;return;
+  }
+
+  const today=new Date().toLocaleDateString('en-CA');
+  const datedPath=`data/chat_analytics_${today}.xlsx`;
+  const livePath=`data/chat_analytics.xlsx`;
+
+  const r1=await uploadFile(datedPath,encBase64,token);
+  const r2=await uploadFile(livePath,encBase64,token);
+
+  if(r1.ok && r2.ok){
+    showStatus(`Encrypted & published.\n\n• Backup saved: ${datedPath.split('/')[1]}\n• Live file updated\n\nDashboard refreshes in ~1–2 minutes.`,"success");
+    document.getElementById('excelFile').value="";
+    document.getElementById('preview').className="preview";
+    VALIDATED_BYTES=null;
+  }else{
+    const errs=[];
+    if(!r1.ok)errs.push(`Backup (${datedPath.split('/')[1]}): ${r1.error}`);
+    if(!r2.ok)errs.push(`Live file: ${r2.error}`);
+    showStatus("Upload failed:\n\n"+errs.join("\n")+"\n\nCheck the token has Contents: write on this repo.","error");
+    document.getElementById('submitBtn').disabled=false;
+  }
+}
+
+async function uploadFile(path,content,token,_retry){
+  try{
+    let sha=null;
+    const getResp=await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}&t=${Date.now()}`,{
+      cache:'no-store',
+      headers:{'Authorization':`Bearer ${token}`,'Accept':'application/vnd.github+json'}
+    });
+    if(getResp.ok){const d=await getResp.json();sha=d.sha;}
+
+    const body={message:`Update ${path.split('/')[1]} via admin`,content,branch:GITHUB_BRANCH};
+    if(sha)body.sha=sha;
+
+    const resp=await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`,{
+      method:'PUT',
+      headers:{'Authorization':`Bearer ${token}`,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+
+    if(!resp.ok){
+      const e=await resp.json().catch(()=>({}));
+      const msg=e.message||resp.status+" "+resp.statusText;
+      if(!_retry && (resp.status===409 || resp.status===422 || /does not match|sha/i.test(msg))){
+        await new Promise(r=>setTimeout(r,600));
+        return uploadFile(path,content,token,true);
+      }
+      return {ok:false,error:msg};
+    }
+    return {ok:true};
+  }catch(err){return {ok:false,error:err.message};}
+}
+
+function showStatus(msg,type){
+  const s=document.getElementById('status');
+  s.textContent=msg;
+  s.className=`status show ${type}`;
+}
+</script>
+
+</body>
+</html>
