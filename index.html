@@ -60,7 +60,7 @@ section{margin:44px 0;animation:rise .5s ease both}
 .sdesc b{color:var(--cream);font-weight:600}
 
 /* KPI */
-.strip{display:grid;grid-template-columns:repeat(6,1fr);gap:13px}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:13px}
 .kpi{background:linear-gradient(160deg,#18212f,#121925);border:1px solid var(--line);border-radius:13px;padding:17px 16px;position:relative;overflow:hidden;transition:transform .18s,border-color .18s}
 .kpi .b{position:absolute;top:0;left:0;width:3px;height:100%;background:var(--blue)}
 .kpi.good .b{background:var(--teal)}.kpi.hot .b{background:var(--hot)}
@@ -302,9 +302,12 @@ function pct(n,d){return d>0?Math.round(100*n/d):0;}
 const MON={Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};
 const MONN=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function parseIST(s){s=String(s||'');const m=s.match(/(\d{1,2})\s+(\w{3})\s+(\d{4}),\s+(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)/i);if(!m)return null;let h=parseInt(m[4],10)%12;if(/pm/i.test(m[7]))h+=12;const mon=MON[m[2].slice(0,1).toUpperCase()+m[2].slice(1,3).toLowerCase()];if(!mon)return null;return {year:+m[3],mon,day:+m[1],hour:h,min:+m[5],key:(+m[3])*10000+mon*100+(+m[1])};}
-function maskPhone(p){p=String(p||'').replace(/\D/g,'');if(p.length<6)return p?'••••':'';return p.slice(0,2)+'•••'+p.slice(-3);}
-function maskEmail(e){e=String(e||'');const m=e.match(/^([^@]+)@(.+)$/);if(!m)return'';const u=m[1];return (u.length<=2?u[0]+'•':u.slice(0,2)+'•••')+'@'+m[2];}
-function maskId(id){id=String(id||'');return id.length>8?id.slice(0,6)+'…':id;}
+// Signed-in admin sees full values — no masking or truncation anywhere on screen.
+function maskPhone(p){return String(p==null?'':p);}
+function maskEmail(e){return String(e==null?'':e);}
+function maskId(id){return String(id==null?'':id);}
+// 12-hour time to match the source export exactly (e.g. "09:19 PM")
+function fmtTime(o){const h=o.hour%12||12;return `${String(h).padStart(2,'0')}:${String(o.min).padStart(2,'0')} ${o.hour<12?'AM':'PM'}`;}
 
 /* ---------- conversation parsing ---------- */
 const RE_FORM=/^(full name|email address|country code|mobile number|program type|interested program|state|city|preferred callback date|preferred callback time|privacy notice)\s*:/i;
@@ -356,7 +359,7 @@ function buildRecords(rows){
         if(seen.has(norm))repeated++;seen.add(norm);
         let isGated=false,isDef=false;const next=turns[j+1];
         if(next&&next.role==='Agent'){const na=next.text.toLowerCase();if(na.includes(GATE)){isGated=true;gated++;}else if(na.includes(DEFLECT)){isDef=true;deflected++;}}
-        questions.push({text:txt.slice(0,220),themes:tagThemes(txt),gated:isGated,deflected:isDef});
+        questions.push({text:txt,themes:tagThemes(txt),gated:isGated,deflected:isDef});
       }else{if(tn.text.toLowerCase().includes(GATE))gateCount++;lastAgentLow=tn.text.toLowerCase();}
     }
     const agentMsgs=Number(r["Agent Messages"]||0),tokens=Number(r["Total Tokens"]||0);
@@ -365,9 +368,12 @@ function buildRecords(rows){
     const cbDate=(conv.match(/preferred callback date:\s*([^\n]+)/i)||[])[1]||'';
     const cbTime=(conv.match(/preferred callback time:\s*([^\n]+)/i)||[])[1]||'';
     const em=conv.match(/[\w.\-+]+@[\w.\-]+\.\w+/);
-    const ph=conv.match(/mobile number:\s*\+?([\d\s]{6,})/i);
+    const ccm=conv.match(/country code:\s*(\+?\d{1,4})/i);
+    const ph=conv.match(/mobile number:\s*(\+?[\d\s]{5,})/i);
     const nm=conv.match(/full name:\s*([^\n]+)/i);
-    const rawPhone=ph?ph[1].replace(/\s/g,''):'';
+    const cc=ccm?(ccm[1].startsWith('+')?ccm[1]:'+'+ccm[1]):'';
+    const mob=ph?ph[1].replace(/\s/g,''):'';
+    const rawPhone=mob?(mob.startsWith('+')?mob:(cc?cc+' '+mob:mob)):'';
     const rawEmail=em?em[0]:'';
     const rawName=nm?nm[1].trim():'';
     const blob=(r["Title"]||'')+' '+conv;
@@ -389,7 +395,7 @@ function buildRecords(rows){
       programs:tagPrograms(blob),level:levelOf(blob),
       summary:String(r["Summary"]||''),conv,
       rawName,rawEmail,rawPhone,
-      personKey:(rawPhone||rawEmail||'').toLowerCase()
+      personKey:(rawPhone?rawPhone.replace(/\D/g,''):rawEmail.toLowerCase())
     };
   }).filter(r=>r.created);
   const keys=RECORDS.map(r=>r.key).filter(Boolean).sort((a,b)=>a-b);
@@ -466,6 +472,7 @@ function secKPIs(){
     {l:'Engaged rate',v:pct(eng,n)+'%',note:`${eng} went multi-turn`,cls:'good',drill:'engaged'},
     {l:'Contact captured',v:pct(con,n)+'%',note:`${con} shared details`,cls:'good',drill:'contact'},
     {l:'Callbacks booked',v:cb.toLocaleString(),note:`${pct(cb,n)}% of chats`,cls:'good',drill:'callback'},
+    {l:'Drop-off',v:pct(n-con,n)+'%',note:`${(n-con).toLocaleString()} left without sharing details`,cls:'hot',drill:'dropall'},
     {l:'Answer gap',v:pct(gQ,tQ)+'%',note:`${gQ} of ${tQ} questions gated`,cls:'hot',drill:'gap'},
     {l:'Avg depth',v:avg,note:'agent replies / chat',cls:'neut',drill:'all'}
   ];
@@ -658,7 +665,7 @@ function secDepth(){
 /* 12 explorer */
 function secExplorer(){
   return `<section><div class="shead"><span class="n">11</span><h2>Chat explorer</h2></div>
-    <div class="sdesc">Every chat in range. Identifiers masked on screen; CSV export holds full values. Sort by any column; open a row for the transcript.</div>
+    <div class="sdesc">Every chat in range. Full identifiers are shown to you as the signed-in admin (access is password-gated). Sort by any column; open a row for the transcript.</div>
     <div class="panel"><div class="tools"><input class="search" id="explSearch" placeholder="Search title, summary, topic…" oninput="onSearch(this.value)"><button class="exp-btn" onclick="exportCSV()">Export CSV (full values)</button></div>
     <div class="tbl-scroll"><table id="explTable"></table></div></div></section>`;
 }
@@ -675,7 +682,7 @@ function drawTable(){
   if(!rows.length){$("explTable").innerHTML=head+`<tbody><tr><td colspan="8" class="empty">No chats match.</td></tr></tbody>`;return;}
   let body='';
   rows.forEach(r=>{
-    const o=r.created,when=`${o.day} ${MONN[o.mon]} · ${String(o.hour).padStart(2,'0')}:${String(o.min).padStart(2,'0')}`;
+    const o=r.created,when=`${o.day} ${MONN[o.mon]} · ${fmtTime(o)}`;
     const topics=[...new Set(r.questions.flatMap(q=>q.themes))].slice(0,3);const open=EXPANDED.has(r.idx);
     body+=`<tr class="crow" data-idx="${r.idx}"><td class="mono" style="color:var(--muted);white-space:nowrap">${esc(when)}</td><td><div style="font-weight:600">${esc(r.title)}</div><div class="mono" style="font-size:10.5px;color:var(--faint)">${esc(maskId(r.id))}</div></td><td class="mono">${r.depth}</td><td>${r.gated>0?`<span class="pill g">${r.gated}</span>`:`<span class="pill n">0</span>`}</td><td><span class="pill ${r.contactCaptured?'y':'n'}">${r.contactCaptured?'yes':'—'}</span></td><td><span class="pill ${r.callbackBooked?'y':'n'}">${r.callbackBooked?'booked':'—'}</span></td><td>${topics.length?topics.map(t=>`<span class="pill n" style="margin-right:3px">${esc(t)}</span>`).join(''):'<span class="pill n">—</span>'}</td><td><button class="exp-btn" data-idx="${r.idx}" data-act="toggle">${open?'close':'open'}</button></td></tr>`;
     if(open)body+=`<tr><td colspan="8">${transcriptHtml(r)}</td></tr>`;
@@ -686,7 +693,7 @@ function transcriptHtml(r){
   const turns=splitTurns(r.conv);
   let h=`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">${esc(r.summary||'No summary.')}</div><div class="transcript">`;
   if(!turns.length)h+=`<div class="empty">Empty conversation.</div>`;
-  turns.forEach(t=>{let txt=t.text;txt=txt.replace(/[\w.\-+]+@[\w.\-]+\.\w+/g,m=>maskEmail(m));txt=txt.replace(/(mobile number:\s*\+?)([\d\s]{6,})/ig,(m,p,d)=>p+maskPhone(d));txt=txt.replace(/(\+?91[\s-]?)?\b([6-9]\d{9})\b/g,m=>maskPhone(m));h+=`<div class="t-turn"><span class="t-role">${t.role==='User'?'Prospect':'Aanya'}</span><span class="${t.role==='User'?'t-user':'t-agent'}">${esc(txt)}</span></div>`;});
+  turns.forEach(t=>{h+=`<div class="t-turn"><span class="t-role">${t.role==='User'?'Prospect':'Aanya'}</span><span class="${t.role==='User'?'t-user':'t-agent'}">${esc(t.text)}</span></div>`;});
   return h+`</div>`;
 }
 function onSearch(v){SEARCH=v;drawTable();}
@@ -715,6 +722,7 @@ function openDrill(kind,arg){
     case'engaged':recs=VIEW.filter(r=>r.engaged);title="Engaged chats";sub="More than one Aanya reply";break;
     case'contact':recs=VIEW.filter(r=>r.contactCaptured);title="Contact captured";sub="Shared details or accepted privacy notice";break;
     case'callback':recs=VIEW.filter(r=>r.callbackBooked);title="Callbacks booked";break;
+    case'dropall':recs=VIEW.filter(r=>!r.contactCaptured);title="Drop-off — no contact captured";sub="Chats that ended without the prospect sharing details";break;
     case'gap':recs=VIEW.filter(r=>r.gated>0);title="Chats with a gated question";sub="A question met the details gate instead of an answer";opts.showGated=true;break;
     case'gaptheme':recs=VIEW.filter(r=>has(r,arg,true));title=`Gated: ${arg}`;sub="Questions on this topic that hit the gate";opts.showGated=true;break;
     case'theme':recs=VIEW.filter(r=>has(r,arg,false));title=`Topic: ${arg}`;break;
@@ -743,21 +751,21 @@ function openDrill(kind,arg){
     <div class="kv"><span class="k">Email</span><span class="v mono">${esc(p.email?maskEmail(p.email):'—')}</span></div>
     <div class="kv"><span class="k">Programs</span><span class="v">${p.programs.length?esc(p.programs.join(', ')):'—'}</span></div>
     <div class="kv"><span class="k">Callback</span><span class="v">${p.callback?'booked':'not booked'}</span></div>
-    <div style="font-size:11px;color:var(--faint);margin-top:8px">Full contact is in the leads / call-sheet CSV exports.</div></div>`;}
+    <div style="font-size:11px;color:var(--faint);margin-top:8px">All their chats are listed below. Use the leads / call-sheet CSV for CRM import.</div></div>`;}
   const list=recs.length?recs.slice().sort((a,b)=>b.key-a.key).map(r=>chatCard(r,opts)).join(''):`<div class="empty">No chats here.</div>`;
   $("drawerBody").innerHTML=`<div class="drawer-tools"><span class="cap" style="margin:0">${recs.length} chat${recs.length===1?'':'s'}</span>${recs.length?`<button class="exp-btn" onclick="exportDrill()">Export these as CSV</button>`:''}</div>${head}${list}`;
-  $("drawerBody").onclick=e=>{const b=e.target.closest('[data-act="dtoggle"]');if(b){const w=b.closest('.card-chat').querySelector('.dtrans');w.style.display=w.style.display==='none'?'block':'none';b.textContent=w.style.display==='none'?'read transcript':'hide transcript';}};
+  $("drawerBody").onclick=e=>{const b=e.target.closest('[data-act="dtoggle"]');if(!b)return;const w=b.closest('.card-chat').querySelector('.dtrans');if(!w.dataset.loaded){const rec=RECORDS.find(r=>r.idx===Number(w.getAttribute('data-cidx')));if(rec){w.innerHTML=transcriptHtml(rec);w.dataset.loaded='1';}}w.style.display=w.style.display==='none'?'block':'none';b.textContent=w.style.display==='none'?'read transcript':'hide transcript';};
   $("drawer").classList.add('open');
 }
 function chatCard(r,opts){
-  const o=r.created,when=`${o.day} ${MONN[o.mon]} ${o.year} · ${String(o.hour).padStart(2,'0')}:${String(o.min).padStart(2,'0')} IST`;
+  const o=r.created,when=`${o.day} ${MONN[o.mon]} ${o.year} · ${fmtTime(o)} IST`;
   const badges=[`<span class="pill n">${r.depth} replies</span>`,r.gated>0?`<span class="pill g">${r.gated} gated</span>`:'',r.contactCaptured?'<span class="pill y">contact</span>':'',r.callbackBooked?'<span class="pill y">callback</span>':''].filter(Boolean).join(' ');
   let gq='';
   if(opts&&opts.showGated){const gs=r.questions.filter(q=>q.gated||q.deflected).slice(0,6);if(gs.length)gq=`<div style="margin:8px 0 2px">${gs.map(q=>`<span class="gq">${esc(q.text)}</span>`).join('')}</div>`;}
   return `<div class="card-chat"><div class="ch-top"><div><div class="ch-title">${esc(r.title)}</div><div class="ch-when">${esc(when)} · ${esc(maskId(r.id))}</div></div><button class="exp-btn" data-act="dtoggle">read transcript</button></div>
     <div class="ch-badges">${badges}</div>${gq}
     <div class="ch-sum">${esc(r.summary||'No summary.')}</div>
-    <div class="dtrans" style="display:none;margin-top:10px">${transcriptHtml(r)}</div></div>`;
+    <div class="dtrans" data-cidx="${r.idx}" style="display:none;margin-top:10px"></div></div>`;
 }
 function closeDrill(){$("drawer").classList.remove('open');}
 
@@ -794,7 +802,7 @@ function renderMethod(){
   <b>Leads &amp; serial engagers.</b> Chats are grouped into people by shared phone or email. Lead score (0–100): callback +45, depth ×3 (cap 12), questions ×2 (cap 15), repeat visit +15, known program +8. Hot ≥65, Warm ≥38. Serial engagers = people with more than one chat.<br><br>
   <b>Drop-offs.</b> Each chat gets one outcome by its strongest signal: booked callback → contact captured → bounced after one reply → left at the gate → engaged then dropped. The reason is inferred from how the chat ended.<br><br>
   <b>Tokens.</b> Excluded as a cost figure — "Total Tokens" here is dominated by repeated prompt/RAG context, so per-chat numbers would overstate spend.<br><br>
-  <b>Privacy.</b> Names, emails, phones and chat IDs are masked on screen; CSV exports carry full values for your CRM only.`;
+  <b>Privacy.</b> You're the signed-in admin, so names, emails, phone numbers (with country code) and chat IDs are shown in full on screen — nothing is masked or truncated. Access is password-gated with a 30-minute idle timeout, and the data is decrypted only in your browser. CSV exports carry the same full values for your CRM.`;
 }
 </script>
 </body>
